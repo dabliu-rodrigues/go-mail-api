@@ -3,11 +3,13 @@ package campaign
 import (
 	"emailn/internal/contract"
 	internalerrors "emailn/internal/internal-errors"
+	"errors"
 )
 
 type Service interface {
 	Create(newCampaign contract.NewCampaign) (string, error)
 	GetByID(id string) (*contract.CampaignResponse, error)
+	Delete(id string) error
 }
 
 type ServiceImp struct {
@@ -20,7 +22,7 @@ func (s *ServiceImp) Create(newCampaign contract.NewCampaign) (string, error) {
 		return "", err
 	}
 
-	err = s.Repository.Save(campaign)
+	err = s.Repository.Create(campaign)
 	if err != nil {
 		return "", internalerrors.ErrInternal
 	}
@@ -31,13 +33,34 @@ func (s *ServiceImp) Create(newCampaign contract.NewCampaign) (string, error) {
 func (s *ServiceImp) GetByID(id string) (*contract.CampaignResponse, error) {
 	campaign, err := s.Repository.GetByID(id)
 	if err != nil {
-		return nil, internalerrors.ErrInternal
+		return nil, internalerrors.ProcessErrorToReturn(err)
 	}
 
 	return &contract.CampaignResponse{
-		ID:      campaign.ID,
-		Name:    campaign.Name,
-		Content: campaign.Content,
-		Status:  string(campaign.Status),
+		ID:                   campaign.ID,
+		Name:                 campaign.Name,
+		Content:              campaign.Content,
+		Status:               string(campaign.Status),
+		AmountOfEmailsToSend: len(campaign.Contacts),
 	}, nil
+}
+
+func (s *ServiceImp) Delete(id string) error {
+	campaign, err := s.Repository.GetByID(id)
+	if err != nil {
+		return internalerrors.ProcessErrorToReturn(err)
+	}
+
+	if campaign.Status != Status_Pending {
+		return errors.New("Campaign status invalid")
+	}
+
+	campaign.Delete()
+
+	err = s.Repository.Delete(campaign)
+	if err != nil {
+		return internalerrors.ErrInternal
+	}
+
+	return nil
 }

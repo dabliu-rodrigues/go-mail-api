@@ -18,3 +18,5 @@ func NewDb() *gorm.DB {
 	db.AutoMigrate(&campaign.Campaign{}, &campaign.Contact{})
 	return db
 }
+
+//docker run -e POSTGRES_USER=emailn_dev -e POSTGRES_PASSWORD=1234 -p 5432:5432 -d postgres
