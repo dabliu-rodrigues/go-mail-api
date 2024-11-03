@@ -10,6 +10,7 @@ type Service interface {
 	Create(newCampaign contract.NewCampaign) (string, error)
 	GetByID(id string) (*contract.CampaignResponse, error)
 	Delete(id string) error
+	Start(id string) error
 }
 
 type ServiceImp struct {
@@ -63,18 +64,25 @@ func (s *ServiceImp) Delete(id string) error {
 	return nil
 }
 
+func (s *ServiceImp) SendEmailAndUpdateStatus(campaignSaved *Campaign) {
+	err := s.SendMail(campaignSaved)
+	if err != nil {
+		campaignSaved.Fail()
+	} else {
+		campaignSaved.Done()
+	}
+	s.Repository.Update(campaignSaved)
+}
+
 func (s *ServiceImp) Start(id string) error {
 	campaign, err := s.getAndValidateStatusIsPending(id)
 	if err != nil {
 		return err
 	}
 
-	err = s.SendMail(campaign)
-	if err != nil {
-		return internalerrors.ProcessErrorToReturn(err)
-	}
+	go s.SendEmailAndUpdateStatus(campaign)
 
-	campaign.Done()
+	campaign.Start()
 	err = s.Repository.Update(campaign)
 	if err != nil {
 		return internalerrors.ProcessErrorToReturn(err)
