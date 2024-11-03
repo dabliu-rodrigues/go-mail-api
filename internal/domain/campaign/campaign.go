@@ -37,6 +37,10 @@ func (c *Campaign) Cancel() {
 	c.Status = Status_Canceled
 }
 
+func (c *Campaign) Done() {
+	c.Status = Status_Done
+}
+
 func (c *Campaign) Delete() {
 	c.Status = Status_Deleted
 }
